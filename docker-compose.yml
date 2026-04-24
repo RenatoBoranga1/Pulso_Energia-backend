@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: energy-bill-ai-db
+    environment:
+      POSTGRES_DB: energy_bill_ai
+      POSTGRES_USER: energy_user
+      POSTGRES_PASSWORD: energy_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U energy_user -d energy_bill_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: energy-bill-ai-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://energy_user:energy_pass@db:5432/energy_bill_ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:

@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-energy_bill_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-energy_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-energy_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-energy_user} -d ${POSTGRES_DB:-energy_bill_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ${APP_IMAGE:?Set APP_IMAGE to the published container image}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-energy_user}:${POSTGRES_PASSWORD:-energy_pass}@db:5432/${POSTGRES_DB:-energy_bill_ai}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}
+
+volumes:
+  postgres_data:
+  uploads_data:
