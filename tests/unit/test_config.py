@@ -27,3 +27,44 @@ def test_settings_read_environment_variables(monkeypatch) -> None:
 
     dispose_engine()
     get_settings.cache_clear()
+
+
+def test_settings_normalizes_render_postgres_url(monkeypatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgres://energy_user:secret@render-postgres.internal:5432/energy_bill_ai")
+
+    from app.core.config import get_settings
+    from app.db.session import dispose_engine
+
+    dispose_engine()
+    get_settings.cache_clear()
+
+    settings = get_settings()
+
+    assert settings.database_url == (
+        "postgresql+psycopg://energy_user:secret@render-postgres.internal:5432/energy_bill_ai"
+    )
+
+    dispose_engine()
+    get_settings.cache_clear()
+
+
+def test_settings_rejects_docker_database_host_in_production(monkeypatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://energy_user:secret@db:5432/energy_bill_ai")
+
+    from app.core.config import get_settings
+    from app.db.session import dispose_engine
+
+    dispose_engine()
+    get_settings.cache_clear()
+
+    try:
+        get_settings()
+    except ValueError as exc:
+        assert "PostgreSQL Internal Database URL" in str(exc)
+    else:
+        raise AssertionError("Expected production DATABASE_URL with host db to fail")
+
+    dispose_engine()
+    get_settings.cache_clear()

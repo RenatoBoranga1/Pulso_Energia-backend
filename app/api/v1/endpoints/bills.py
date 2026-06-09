@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies.auth import get_current_user
+from app.api.dependencies.auth import get_active_user
 from app.api.dependencies.database import get_db
 from app.api.dependencies.rate_limit import extraction_rate_limit
 from app.core.config import Settings, get_settings
@@ -28,7 +28,7 @@ def extract_bill(
     _: None = Depends(extraction_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> BillReviewResponse:
     service = BillExtractionService(session=session, settings=settings)
     return service.extract(document_id=payload.document_id, current_user_id=current_user.id)
@@ -39,7 +39,7 @@ def get_bill(
     bill_id: UUID,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> BillReviewResponse:
     service = BillExtractionService(session=session, settings=settings)
     return service.get_bill_review(bill_id=bill_id, current_user_id=current_user.id)
@@ -50,7 +50,7 @@ def get_bill_analytics(
     bill_id: UUID,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> BillAnalyticsResponse:
     service = BillAnalyticsService(session=session, settings=settings)
     return service.get_analytics(bill_id=bill_id, current_user_id=current_user.id)
@@ -61,7 +61,7 @@ def get_bill_forecast(
     bill_id: UUID,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> BillForecastResponse:
     service = BillAnalyticsService(session=session, settings=settings)
     return service.get_forecast(bill_id=bill_id, current_user_id=current_user.id)
@@ -73,7 +73,7 @@ def confirm_bill(
     payload: ConfirmBillRequest,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> BillReviewResponse:
     service = BillReviewService(session=session, settings=settings)
     return service.confirm(bill_id=bill_id, payload=payload, current_user_id=current_user.id)
@@ -84,7 +84,7 @@ def delete_bill(
     bill_id: UUID,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> Response:
     service = BillManagementService(session=session, settings=settings)
     service.delete_bill(bill_id=bill_id, current_user_id=current_user.id)
@@ -96,7 +96,7 @@ def get_user_bill_history(
     user_id: UUID,
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> UserBillHistoryResponse:
     service = BillReviewService(session=session, settings=settings)
     return service.list_user_history(user_id=user_id, current_user_id=current_user.id)

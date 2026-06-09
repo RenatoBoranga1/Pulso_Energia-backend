@@ -12,6 +12,7 @@ def test_register_login_and_me_flow(client) -> None:
             "name": "Auth User",
             "email": "auth.user@example.com",
             "password": "StrongPass123!",
+            "accepted_terms": True,
         },
     )
 
@@ -21,6 +22,8 @@ def test_register_login_and_me_flow(client) -> None:
     assert register_payload["user"]["email"] == "auth.user@example.com"
     assert register_payload["refresh_token"]
     assert register_payload["refresh_expires_in_seconds"] > register_payload["expires_in_seconds"]
+    assert register_payload["requires_phone_verification"] is True
+    assert register_payload["account_status"] == "pending_phone_verification"
 
     me_response = client.get(
         "/api/v1/auth/me",
@@ -40,6 +43,7 @@ def test_register_login_and_me_flow(client) -> None:
     login_payload = login_response.json()
     assert login_payload["user"]["email"] == "auth.user@example.com"
     assert login_payload["refresh_token"]
+    assert login_payload["requires_phone_verification"] is True
 
 
 def test_refresh_rotates_token_pair_and_rejects_reuse(client) -> None:
@@ -49,6 +53,7 @@ def test_refresh_rotates_token_pair_and_rejects_reuse(client) -> None:
             "name": "Rotate User",
             "email": "rotate.user@example.com",
             "password": "RotatePass123!",
+            "accepted_terms": True,
         },
     )
     original_refresh_token = register_response.json()["refresh_token"]
@@ -80,6 +85,7 @@ def test_logout_revokes_refresh_token(client) -> None:
             "name": "Logout User",
             "email": "logout.user@example.com",
             "password": "LogoutPass123!",
+            "accepted_terms": True,
         },
     )
     refresh_token = register_response.json()["refresh_token"]
@@ -158,3 +164,18 @@ def test_login_rate_limit_returns_429(client, sample_user, sample_user_password)
     assert last_response.status_code == 429
     assert last_response.json()["error"]["code"] == "rate_limit_exceeded"
     assert "Retry-After" in last_response.headers
+
+
+def test_register_requires_terms_acceptance(client) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Terms User",
+            "email": "terms.user@example.com",
+            "password": "StrongPass123!",
+            "accepted_terms": False,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "terms_not_accepted"

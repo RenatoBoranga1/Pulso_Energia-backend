@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -54,7 +55,7 @@ def sample_user_password() -> str:
 @pytest.fixture
 def sample_user(sample_user_password: str):
     from app.db.session import get_session_factory
-    from app.models.user import User
+    from app.models.user import AccountStatus, User
     from app.services.auth.password_service import PasswordService
 
     session = get_session_factory()()
@@ -63,6 +64,12 @@ def sample_user(sample_user_password: str):
             name="Test User",
             email="test.user@example.com",
             password_hash=PasswordService().hash_password(sample_user_password),
+            phone_number="14999994321",
+            phone_verified=True,
+            phone_verified_at=datetime.now(UTC),
+            account_status=AccountStatus.ACTIVE.value,
+            accepted_terms_at=datetime.now(UTC),
+            accepted_terms_version="test-version",
         )
         session.add(user)
         session.commit()

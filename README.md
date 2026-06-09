@@ -418,6 +418,32 @@ Tambem inclui workflow em [.github/workflows/release.yml](./.github/workflows/re
 
 ## Deploy
 
+### Render
+
+O deploy no Render deve usar PostgreSQL gerenciado do proprio Render. Nao use a URL do Docker Compose (`@db:5432`), `localhost` ou `127.0.0.1` no `DATABASE_URL`, porque esses hosts existem apenas localmente e causam erro de DNS como `psycopg.OperationalError: Name or service not known`.
+
+Opcao recomendada:
+
+1. criar o deploy por Blueprint usando [render.yaml](./render.yaml)
+2. deixar o `DATABASE_URL` vir de `fromDatabase`
+3. manter `ENVIRONMENT=production`
+4. manter `JWT_SECRET_KEY` gerado como segredo
+
+Se o servico ja existe manualmente no Render, ajuste em **Environment**:
+
+```bash
+DATABASE_URL=<Internal Database URL do PostgreSQL no Render>
+ENVIRONMENT=production
+JWT_SECRET_KEY=<segredo forte>
+SMS_PROVIDER=mock
+```
+
+O comando de start esperado e:
+
+```bash
+python -m alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
 Arquivos relevantes:
 
 - [docker-compose.prod.yml](./docker-compose.prod.yml)

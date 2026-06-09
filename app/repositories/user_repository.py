@@ -21,6 +21,10 @@ class UserRepository:
         statement = select(User).where(func.lower(User.email) == normalized_email)
         return self.session.execute(statement).scalar_one_or_none()
 
+    def get_by_phone_number(self, phone_number: str) -> User | None:
+        statement = select(User).where(User.phone_number == phone_number)
+        return self.session.execute(statement).scalar_one_or_none()
+
     def add(self, user: User) -> User:
         self.session.add(user)
         self.session.flush()

@@ -9,7 +9,15 @@ from app.api.dependencies.rate_limit import auth_rate_limit
 from app.core.config import Settings, get_settings
 from app.models.user import User
 from app.schemas.auth import AuthLoginRequest, AuthLogoutRequest, AuthRefreshRequest, AuthRegisterRequest, TokenResponse
+from app.schemas.phone_verification import (
+    PhoneConfirmVerificationRequest,
+    PhoneConfirmVerificationResponse,
+    PhoneStartVerificationRequest,
+    PhoneStartVerificationResponse,
+    PhoneVerificationStatusResponse,
+)
 from app.schemas.user import UserRead
+from app.services.auth.phone_verification_service import PhoneVerificationService
 from app.services.auth.service import AuthenticationService
 
 
@@ -64,3 +72,64 @@ def logout(
 @router.get("/me", response_model=UserRead, summary="Get the authenticated user")
 def me(current_user: User = Depends(get_current_user)) -> UserRead:
     return UserRead.model_validate(current_user)
+
+
+@router.post(
+    "/phone/start-verification",
+    response_model=PhoneStartVerificationResponse,
+    summary="Start phone verification for the authenticated user",
+)
+def start_phone_verification(
+    payload: PhoneStartVerificationRequest,
+    _: None = Depends(auth_rate_limit),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PhoneStartVerificationResponse:
+    service = PhoneVerificationService(session=session, settings=settings)
+    return service.start_verification(user=current_user, payload=payload)
+
+
+@router.post(
+    "/phone/resend-code",
+    response_model=PhoneStartVerificationResponse,
+    summary="Resend a phone verification code",
+)
+def resend_phone_verification_code(
+    _: None = Depends(auth_rate_limit),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PhoneStartVerificationResponse:
+    service = PhoneVerificationService(session=session, settings=settings)
+    return service.resend_code(user=current_user)
+
+
+@router.post(
+    "/phone/confirm-verification",
+    response_model=PhoneConfirmVerificationResponse,
+    summary="Confirm a phone verification code",
+)
+def confirm_phone_verification(
+    payload: PhoneConfirmVerificationRequest,
+    _: None = Depends(auth_rate_limit),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PhoneConfirmVerificationResponse:
+    service = PhoneVerificationService(session=session, settings=settings)
+    return service.confirm_verification(user=current_user, payload=payload)
+
+
+@router.get(
+    "/phone/status",
+    response_model=PhoneVerificationStatusResponse,
+    summary="Get phone verification status for the authenticated user",
+)
+def get_phone_verification_status(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PhoneVerificationStatusResponse:
+    service = PhoneVerificationService(session=session, settings=settings)
+    return service.status(user=current_user)

@@ -4,8 +4,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -42,6 +43,24 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=14, validation_alias="REFRESH_TOKEN_EXPIRE_DAYS")
+    sms_provider: Literal["mock", "twilio"] = Field(default="mock", validation_alias="SMS_PROVIDER")
+    sms_mock_fixed_code: str = Field(default="123456", validation_alias="SMS_MOCK_FIXED_CODE")
+    twilio_account_sid: str | None = Field(default=None, validation_alias="TWILIO_ACCOUNT_SID")
+    twilio_auth_token: str | None = Field(default=None, validation_alias="TWILIO_AUTH_TOKEN")
+    twilio_from_phone: str | None = Field(default=None, validation_alias="TWILIO_FROM_PHONE")
+    phone_verification_code_expire_minutes: int = Field(
+        default=5,
+        validation_alias="PHONE_VERIFICATION_CODE_EXPIRE_MINUTES",
+    )
+    phone_verification_max_attempts: int = Field(
+        default=5,
+        validation_alias="PHONE_VERIFICATION_MAX_ATTEMPTS",
+    )
+    phone_verification_resend_interval_seconds: int = Field(
+        default=30,
+        validation_alias="PHONE_VERIFICATION_RESEND_INTERVAL_SECONDS",
+    )
+    terms_current_version: str = Field(default="2026-04-28", validation_alias="TERMS_CURRENT_VERSION")
     rate_limit_enabled: bool = Field(default=True, validation_alias="RATE_LIMIT_ENABLED")
     auth_rate_limit_requests: int = Field(default=5, validation_alias="AUTH_RATE_LIMIT_REQUESTS")
     auth_rate_limit_window_seconds: int = Field(default=60, validation_alias="AUTH_RATE_LIMIT_WINDOW_SECONDS")
@@ -53,6 +72,41 @@ class Settings(BaseSettings):
     prophet_min_history_points: int = Field(default=12, validation_alias="PROPHET_MIN_HISTORY_POINTS")
     forecast_interval_zscore: float = Field(default=1.96, validation_alias="FORECAST_INTERVAL_ZSCORE")
     enable_prophet: bool = Field(default=True, validation_alias="ENABLE_PROPHET")
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise TypeError("DATABASE_URL must be a string")
+
+        database_url = value.strip()
+        if not database_url:
+            raise ValueError("DATABASE_URL cannot be empty")
+
+        if database_url.startswith("postgres://"):
+            return "postgresql+psycopg://" + database_url.removeprefix("postgres://")
+        if database_url.startswith("postgresql://"):
+            return "postgresql+psycopg://" + database_url.removeprefix("postgresql://")
+        return database_url
+
+    @field_validator("database_url")
+    @classmethod
+    def reject_local_database_url_in_production(cls, value: str, info) -> str:
+        environment = str(info.data.get("environment", "")).lower()
+        if environment not in {"production", "prod"}:
+            return value
+
+        parsed_url = make_url(value)
+        if parsed_url.drivername.startswith("sqlite"):
+            raise ValueError("SQLite cannot be used as DATABASE_URL in production")
+
+        blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "db"}
+        if parsed_url.host in blocked_hosts:
+            raise ValueError(
+                "DATABASE_URL points to a local/Docker host. "
+                "On Render, use the PostgreSQL Internal Database URL from the Render database service.",
+            )
+        return value
 
     @property
     def is_sqlite(self) -> bool:

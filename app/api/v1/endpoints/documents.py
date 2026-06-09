@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies.auth import get_current_user
+from app.api.dependencies.auth import get_active_user
 from app.api.dependencies.database import get_db
 from app.api.dependencies.rate_limit import upload_rate_limit
 from app.core.config import Settings, get_settings
@@ -28,7 +28,7 @@ async def upload_document(
     _: None = Depends(upload_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> DocumentUploadResponse:
     service = DocumentUploadService(session=session, settings=settings)
     return await service.upload(user_id=current_user.id, file=file)

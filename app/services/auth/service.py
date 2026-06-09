@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.refresh_token import RefreshToken
-from app.models.user import User
+from app.models.user import AccountStatus, User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import AuthLoginRequest, AuthLogoutRequest, AuthRefreshRequest, AuthRegisterRequest, TokenResponse
@@ -36,11 +36,21 @@ class AuthenticationService:
                 code="email_already_registered",
                 status_code=status.HTTP_409_CONFLICT,
             )
+        if not payload.accepted_terms:
+            raise AppError(
+                "Para criar a conta, voce precisa aceitar os Termos de Uso e a Politica de Privacidade.",
+                code="terms_not_accepted",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         user = User(
             name=payload.name.strip(),
             email=normalized_email,
             password_hash=self.password_service.hash_password(payload.password),
+            phone_verified=False,
+            account_status=AccountStatus.PENDING_PHONE_VERIFICATION.value,
+            accepted_terms_at=datetime.now(UTC),
+            accepted_terms_version=self.settings.terms_current_version,
         )
         self.user_repository.add(user)
         self.session.commit()
@@ -54,6 +64,12 @@ class AuthenticationService:
                 "Invalid email or password.",
                 code="invalid_credentials",
                 status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.account_status == AccountStatus.BLOCKED.value:
+            raise AppError(
+                "Sua conta esta bloqueada. Entre em contato com o suporte.",
+                code="account_blocked",
+                status_code=status.HTTP_403_FORBIDDEN,
             )
         return self._build_token_response(user)
 
@@ -127,12 +143,21 @@ class AuthenticationService:
             self.session.commit()
             self.session.refresh(user)
 
+        requires_phone_verification = not user.phone_verified or user.account_status != AccountStatus.ACTIVE.value
         return TokenResponse(
             access_token=self.token_service.create_access_token(user),
             refresh_token=issued_refresh_token.token,
             expires_in_seconds=self.settings.access_token_expire_minutes * 60,
             refresh_expires_in_seconds=self.settings.refresh_token_expire_days * 24 * 60 * 60,
             user=UserRead.model_validate(user),
+            requires_phone_verification=requires_phone_verification,
+            account_status=user.account_status,
+            phone_number_masked=user.phone_number_masked,
+            message=(
+                "Confirme seu celular para continuar."
+                if requires_phone_verification
+                else "Login realizado com sucesso."
+            ),
         )
 
     def _build_refresh_token_model(self, *, user: User, issued_token: IssuedRefreshToken) -> RefreshToken:

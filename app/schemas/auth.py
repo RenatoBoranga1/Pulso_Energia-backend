@@ -11,6 +11,7 @@ class AuthRegisterRequest(BaseModel):
     name: str = Field(min_length=2, max_length=255)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    accepted_terms: bool = Field(default=False)
 
 
 class AuthLoginRequest(BaseModel):
@@ -33,6 +34,10 @@ class TokenResponse(BaseModel):
     expires_in_seconds: int
     refresh_expires_in_seconds: int
     user: UserRead
+    requires_phone_verification: bool = False
+    account_status: str
+    phone_number_masked: str | None = None
+    message: str | None = None
 
 
 class TokenPayload(BaseModel):
