@@ -1,6 +1,6 @@
 """add phone verification and terms acceptance
 
-Revision ID: 0004_phone_verification_and_terms
+Revision ID: 0004_phone_verify_terms
 Revises: 0003_refresh_tokens
 Create Date: 2026-04-28 00:00:00.000000
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0004_phone_verification_and_terms"
+revision = "0004_phone_verify_terms"
 down_revision = "0003_refresh_tokens"
 branch_labels = None
 depends_on = None
