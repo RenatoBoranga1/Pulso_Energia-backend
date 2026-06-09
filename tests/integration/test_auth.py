@@ -151,7 +151,7 @@ def test_login_rejects_invalid_credentials(client, sample_user) -> None:
 def test_login_rate_limit_returns_429(client, sample_user, sample_user_password) -> None:
     last_response = None
 
-    for _ in range(6):
+    for _ in range(21):
         last_response = client.post(
             "/api/v1/auth/login",
             json={

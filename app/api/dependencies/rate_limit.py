@@ -39,6 +39,22 @@ def get_rate_limiter() -> InMemoryRateLimiter:
     return InMemoryRateLimiter()
 
 
+def resolve_client_identifier(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        first_forwarded_ip = forwarded_for.split(",", maxsplit=1)[0].strip()
+        if first_forwarded_ip:
+            return first_forwarded_ip
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+
+    if request.client is not None and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
 def build_rate_limit_dependency(
     *,
     scope: str,
@@ -57,7 +73,7 @@ def build_rate_limit_dependency(
         if limit <= 0 or window_seconds <= 0:
             return
 
-        client_host = request.client.host if request.client is not None and request.client.host else "unknown"
+        client_host = resolve_client_identifier(request)
         key = f"{scope}:{client_host}"
         retry_after_seconds = get_rate_limiter().enforce(
             key=key,
@@ -87,6 +103,30 @@ auth_rate_limit = build_rate_limit_dependency(
     scope="auth",
     limit_setting="auth_rate_limit_requests",
     window_setting="auth_rate_limit_window_seconds",
+)
+
+auth_login_rate_limit = build_rate_limit_dependency(
+    scope="auth:login",
+    limit_setting="auth_login_rate_limit_requests",
+    window_setting="auth_login_rate_limit_window_seconds",
+)
+
+auth_register_rate_limit = build_rate_limit_dependency(
+    scope="auth:register",
+    limit_setting="auth_register_rate_limit_requests",
+    window_setting="auth_register_rate_limit_window_seconds",
+)
+
+auth_token_rate_limit = build_rate_limit_dependency(
+    scope="auth:token",
+    limit_setting="auth_token_rate_limit_requests",
+    window_setting="auth_token_rate_limit_window_seconds",
+)
+
+phone_rate_limit = build_rate_limit_dependency(
+    scope="auth:phone",
+    limit_setting="phone_rate_limit_requests",
+    window_setting="phone_rate_limit_window_seconds",
 )
 
 upload_rate_limit = build_rate_limit_dependency(

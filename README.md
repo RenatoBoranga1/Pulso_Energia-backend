@@ -122,8 +122,16 @@ uploads/
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Expiracao do token |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `14` | Expiracao do refresh token |
 | `RATE_LIMIT_ENABLED` | `true` | Habilita rate limiting |
-| `AUTH_RATE_LIMIT_REQUESTS` | `5` | Limite das rotas de auth |
+| `AUTH_RATE_LIMIT_REQUESTS` | `20` | Limite generico das rotas de auth |
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Janela das rotas de auth |
+| `AUTH_LOGIN_RATE_LIMIT_REQUESTS` | `20` | Limite especifico de login |
+| `AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Janela especifica de login |
+| `AUTH_REGISTER_RATE_LIMIT_REQUESTS` | `10` | Limite especifico de cadastro |
+| `AUTH_REGISTER_RATE_LIMIT_WINDOW_SECONDS` | `60` | Janela especifica de cadastro |
+| `AUTH_TOKEN_RATE_LIMIT_REQUESTS` | `60` | Limite de refresh/logout |
+| `AUTH_TOKEN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Janela de refresh/logout |
+| `PHONE_RATE_LIMIT_REQUESTS` | `20` | Limite das rotas de verificacao de celular |
+| `PHONE_RATE_LIMIT_WINDOW_SECONDS` | `60` | Janela das rotas de verificacao de celular |
 | `UPLOAD_RATE_LIMIT_REQUESTS` | `10` | Limite da rota de upload |
 | `UPLOAD_RATE_LIMIT_WINDOW_SECONDS` | `300` | Janela da rota de upload |
 | `EXTRACTION_RATE_LIMIT_REQUESTS` | `10` | Limite da rota de extracao |

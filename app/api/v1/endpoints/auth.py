@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.database import get_db
-from app.api.dependencies.rate_limit import auth_rate_limit
+from app.api.dependencies.rate_limit import (
+    auth_login_rate_limit,
+    auth_register_rate_limit,
+    auth_token_rate_limit,
+    phone_rate_limit,
+)
 from app.core.config import Settings, get_settings
 from app.models.user import User
 from app.schemas.auth import AuthLoginRequest, AuthLogoutRequest, AuthRefreshRequest, AuthRegisterRequest, TokenResponse
@@ -27,7 +32,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED, summary="Register a new user")
 def register(
     payload: AuthRegisterRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(auth_register_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> TokenResponse:
@@ -38,7 +43,7 @@ def register(
 @router.post("/login", response_model=TokenResponse, summary="Authenticate and receive an access token")
 def login(
     payload: AuthLoginRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(auth_login_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> TokenResponse:
@@ -49,7 +54,7 @@ def login(
 @router.post("/refresh", response_model=TokenResponse, summary="Rotate a refresh token and issue a new token pair")
 def refresh(
     payload: AuthRefreshRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(auth_token_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> TokenResponse:
@@ -60,7 +65,7 @@ def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Revoke a refresh token")
 def logout(
     payload: AuthLogoutRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(auth_token_rate_limit),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:
@@ -81,7 +86,7 @@ def me(current_user: User = Depends(get_current_user)) -> UserRead:
 )
 def start_phone_verification(
     payload: PhoneStartVerificationRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(phone_rate_limit),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -96,7 +101,7 @@ def start_phone_verification(
     summary="Resend a phone verification code",
 )
 def resend_phone_verification_code(
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(phone_rate_limit),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -112,7 +117,7 @@ def resend_phone_verification_code(
 )
 def confirm_phone_verification(
     payload: PhoneConfirmVerificationRequest,
-    _: None = Depends(auth_rate_limit),
+    _: None = Depends(phone_rate_limit),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
